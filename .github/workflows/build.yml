@@ -1,9 +1,9 @@
-name: Build spider EXE
+name: Build SpiderNovel EXE
 
 on:
   push:
-    branches: [ "main" ] # Triggers when you push to main
-  workflow_dispatch:     # Allows you to trigger it manually from GitHub
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build-windows:
@@ -16,7 +16,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11' # Stable version for building
+        python-version: '3.11'
 
     - name: Install Dependencies
       run: |
@@ -26,13 +26,11 @@ jobs:
 
     - name: Build EXE with PyInstaller
       run: |
-        # --onefile packages everything into a single .exe
-        # --icon sets your custom icon
-        # --name sets the output file name
-        pyinstaller --name "NovelForge" --onefile --icon=icon.ico main.py
+        # --name sets the output filename to SpiderNovel.exe
+        pyinstaller --name "SpiderNovel" --onefile --icon=icon.ico main.py
 
     - name: Upload EXE as Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: Spider-Windows
-        path: Spider.exe
+        name: SpiderNovel-Windows  # The name of the downloadable zip on GitHub
+        path: dist/SpiderNovel.exe # This must match the name set in the step above
