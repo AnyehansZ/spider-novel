@@ -1,12 +1,16 @@
-name: Build SpiderNovel EXE
+name: Build and Release SpiderNovel
 
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch:
+    tags:
+      - 'v*' # Triggers only when you push a tag like v1.0, v2.0.1, etc.
+  workflow_dispatch: # Allows manual triggering for testing
+
+permissions:
+  contents: write  # REQUIRED: Allow the action to create a Release
 
 jobs:
-  build-windows:
+  build-and-release:
     runs-on: windows-latest
 
     steps:
@@ -26,11 +30,17 @@ jobs:
 
     - name: Build EXE with PyInstaller
       run: |
-        # --name sets the output filename to SpiderNovel.exe
-        pyinstaller --name "SpiderNovel" --onefile --icon=icon.ico main.py
+        # --collect-all rich fixes the error you just saw
+        pyinstaller --name "SpiderNovel" --onefile --icon=icon.ico --collect-all rich main.py
 
-    - name: Upload EXE as Artifact
-      uses: actions/upload-artifact@v4
+    # This creates the Release and attaches the EXE
+    - name: Release to GitHub
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/') # Only run this if a tag triggered the workflow
       with:
-        name: SpiderNovel-Windows  # The name of the downloadable zip on GitHub
-        path: dist/SpiderNovel.exe # This must match the name set in the step above
+        files: dist/SpiderNovel.exe
+        name: Release ${{ github.ref_name }} # Names the release "Release v1.0"
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
