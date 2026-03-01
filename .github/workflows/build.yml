@@ -1,9 +1,15 @@
-name: Build SpiderNovel EXE
+name: Build and Release SpiderNovel
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main" ] # Builds on every commit to check for errors
+    tags:
+      - 'v*' # Triggers a Release when you push a tag (e.g., v1.0, v2.3.1)
   workflow_dispatch:
+
+# This permission is required to upload the EXE to the Releases page
+permissions:
+  contents: write
 
 jobs:
   build-windows:
@@ -26,11 +32,22 @@ jobs:
 
     - name: Build EXE with PyInstaller
       run: |
-        # --name sets the output filename to SpiderNovel.exe
-        pyinstaller --name "SpiderNovel" --onefile --icon=icon.ico main.py
+        # --collect-all rich: Fixes the "No module named rich._unicode_data" crash
+        # --onefile: Bundles everything into a single .exe
+        pyinstaller --name "SpiderNovel" --onefile --icon=icon.ico --collect-all rich main.py
 
+    # 1. Always upload as an artifact (good for testing builds without releasing)
     - name: Upload EXE as Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: SpiderNovel-Windows  # The name of the downloadable zip on GitHub
-        path: dist/SpiderNovel.exe # This must match the name set in the step above
+        name: SpiderNovel-Windows
+        path: dist/SpiderNovel.exe
+
+    # 2. If this was triggered by a Tag, publish it to the Releases page
+    - name: Publish Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: dist/SpiderNovel.exe
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
