@@ -1,0 +1,29 @@
+2026-03-01 15:43:59 - INFO - Session started for My Ranch at xiaxuenovels.xyz
+2026-03-01 15:44:19 - INFO - Starting fresh crawl
+2026-03-01 15:44:21 - INFO - Fetching URL: https://xiaxuenovels.xyz/my-ranch/chapter-1-soul-of-the-dragon
+2026-03-01 15:44:21 - ERROR - Error crawling https://xiaxuenovels.xyz/my-ranch/chapter-1-soul-of-the-dragon: 'XiaXueCrawler' object has no attribute 'headers'
+2026-03-01 15:48:47 - INFO - Session started for My Ranch at xiaxuenovels.xyz
+2026-03-01 15:48:53 - INFO - Starting fresh crawl
+2026-03-01 15:48:56 - INFO - Fetching URL: https://xiaxuenovels.xyz/my-ranch/chapter-1-soul-of-the-dragon
+2026-03-01 15:48:59 - INFO - Created folder: novels\my-ranch
+2026-03-01 15:48:59 - INFO - Saved chapter 1: MR Chapter 1: Soul of the Dragon to novels\my-ranch\chapter_0001.csv
+2026-03-01 15:49:00 - INFO - Fetching URL: https://xiaxuenovels.xyz/my-ranch/mr-chapter-2-preparing-to-leave/
+2026-03-01 15:49:02 - INFO - Saved chapter 2: MR Chapter 2: Preparing to leave to novels\my-ranch\chapter_0002.csv
+2026-03-01 15:49:05 - INFO - Fetching URL: https://xiaxuenovels.xyz/my-ranch/mr-chapter-3-door-to-hell/
+2026-03-01 15:49:07 - INFO - Saved chapter 3: MR Chapter 3: Door to Hell to novels\my-ranch\chapter_0003.csv
+2026-03-01 15:49:09 - INFO - Fetching URL: https://xiaxuenovels.xyz/my-ranch/mr-chapter-4-jackpot/
+2026-03-01 15:49:11 - INFO - Saved chapter 4: MR Chapter 4: Jackpot to novels\my-ranch\chapter_0004.csv
+2026-03-01 15:49:12 - INFO - Fetching URL: https://xiaxuenovels.xyz/my-ranch/mr-chapter-5-unimaginable-value/
+2026-03-01 15:49:14 - INFO - Saved chapter 5: MR Chapter 5: Unimaginable Value to novels\my-ranch\chapter_0005.csv
+2026-03-01 15:49:16 - INFO - Fetching URL: https://xiaxuenovels.xyz/my-ranch/mr-chapter-6-sold/
+2026-03-01 15:49:18 - INFO - Saved chapter 6: MR Chapter 6: Sold! to novels\my-ranch\chapter_0006.csv
+2026-03-01 15:49:20 - INFO - Fetching URL: https://xiaxuenovels.xyz/my-ranch/mr-chapter-7-finding-a-new-home/
+2026-03-01 15:49:22 - INFO - Saved chapter 7: MR Chapter 7: Finding a new home to novels\my-ranch\chapter_0007.csv
+2026-03-01 15:49:24 - INFO - Fetching URL: https://xiaxuenovels.xyz/my-ranch/mr-chapter-8-choices/
+2026-03-01 15:49:26 - INFO - Saved chapter 8: MR Chapter 8: Choices to novels\my-ranch\chapter_0008.csv
+2026-03-01 15:49:29 - INFO - Fetching URL: https://xiaxuenovels.xyz/my-ranch/mr-chapter-9-this-is-it/
+2026-03-01 15:49:31 - INFO - Saved chapter 9: MR Chapter 9: This is it to novels\my-ranch\chapter_0009.csv
+2026-03-01 15:49:32 - INFO - Fetching URL: https://xiaxuenovels.xyz/my-ranch/mr-chapter-10-priceless/
+2026-03-01 15:49:34 - INFO - Saved chapter 10: MR Chapter 10: Priceless to novels\my-ranch\chapter_0010.csv
+2026-03-01 15:49:37 - INFO - Fetching URL: https://xiaxuenovels.xyz/my-ranch/mr-chapter-11-first-employee/
+2026-03-01 15:49:39 - INFO - Saved chapter 11: MR Chapter 11: First Employee to novels\my-ranch\chapter_0011.csv
