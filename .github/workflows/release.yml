@@ -56,7 +56,11 @@ jobs:
           echo "=== Build Information ==="
           echo "Python: $(python --version)"
           echo "Pip: $(pip --version)"
-          echo "Release: ${{ github.event.release.tag_name || env.RELEASE_VERSION }}"
+          $release: ${{ github.event.release.tag_name}}
+          if ([string]::IsNullOrWhiteSpace($release)) {
+            $release = $env:RELEASE_VERSION
+          }
+          echo "Release: $release"
           echo "Ref: ${{ github.ref }}"
         shell: pwsh
       
