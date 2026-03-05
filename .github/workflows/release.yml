@@ -1,391 +1,79 @@
-# GitHub Actions Release Workflow
-# File: .github/workflows/release.yml
-#
-# Triggered by: Creating a release on GitHub
-# Purpose: Build standalone Windows EXE and upload to release
-#
-# Features:
-# - Builds Windows standalone EXE
-# - Uploads to GitHub releases
-# - Creates changelog
-# - Version management
-# - Asset verification
-
-name: Build & Release
+name: Build and Release SpiderNovel
 
 on:
-  release:
-    types: [published, created]
+  push:
+    branches: [ "main" ]
+    tags:
+      - 'v*'
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Release version (e.g., v2.0.0)'
-        required: false
-        default: 'dev'
 
-concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: false
-
-env:
-  PYTHONUNBUFFERED: 1
-  RICH_FORCE_TERMINAL: 0
+permissions:
+  contents: write
 
 jobs:
-  # ========================================================================
-  # Build Windows Standalone EXE
-  # ========================================================================
-  build-windows-exe:
-    name: Build Windows Executable
+  build-windows:
     runs-on: windows-latest
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-      
-      - name: Display build info
-        run: |
-          echo "=== Build Information ==="
-          echo "Python: $(python --version)"
-          echo "Pip: $(pip --version)"
-          $release: ${{ github.event.release.tag_name}}
-          if ([string]::IsNullOrWhiteSpace($release)) {
-            $release = $env:RELEASE_VERSION
-          }
-          echo "Release: $release"
-          echo "Ref: ${{ github.ref }}"
-        shell: pwsh
-      
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip setuptools wheel
-          pip install -r requirements.txt --quiet
-          pip install pyinstaller==6.1.0 --quiet
-          echo "✓ Dependencies installed"
-        env:
-          PIP_DISABLE_PIP_VERSION_CHECK: 1
-      
-      - name: Create PyInstaller spec file
-        run: |
-          $spec = @"
-          # -*- mode: python ; coding: utf-8 -*-
-          import sys
-          from pathlib import Path
-          
-          block_cipher = None
-          
-          a = Analysis(
-              ['main.py'],
-              pathex=[],
-              binaries=[],
-              datas=[],
-              hiddenimports=[
-                  'rich',
-                  'rich.console',
-                  'rich.panel',
-                  'rich.prompt',
-                  'rich.table',
-                  'google.genai',
-                  'google.genai.types',
-                  'bs4',
-                  'ebooklib',
-                  'ebooklib.epub',
-              ],
-              hookspath=[],
-              hooksconfig={},
-              runtime_hooks=[],
-              excludedimports=[],
-              win_no_prefer_redirects=False,
-              win_private_assemblies=False,
-              cipher=block_cipher,
-              noarchive=False,
-          )
-          
-          pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
-          
-          exe = EXE(
-              pyz,
-              a.scripts,
-              a.binaries,
-              a.zipfiles,
-              a.datas,
-              [],
-              name='NovelForge',
-              debug=False,
-              bootloader_ignore_signals=False,
-              strip=False,
-              upx=False,
-              upx_exclude=[],
-              runtime_tmpdir=None,
-              console=True,
-              disable_windowed_traceback=False,
-              argv_emulation=False,
-              target_arch=None,
-              codesign_identity=None,
-              entitlements_file=None,
-              icon=None,
-          )
-          "@
-          
-          $spec | Out-File -Encoding UTF8 NovelForge.spec
-          Write-Host "✓ PyInstaller spec created"
-        shell: pwsh
-      
-      - name: Build with PyInstaller
-        run: |
-          Write-Host "Starting PyInstaller build..."
-          pyinstaller NovelForge.spec --noconfirm --distpath ./dist --workpath ./build --specpath .
-          
-          if ($LASTEXITCODE -eq 0) {
-              Write-Host "✓ PyInstaller build successful"
-          } else {
-              Write-Host "✗ PyInstaller build failed"
-              exit 1
-          }
-        shell: pwsh
-      
-      - name: Verify build output
-        run: |
-          if (Test-Path "dist/NovelForge.exe") {
-              $exe_size = (Get-Item "dist/NovelForge.exe").length
-              $exe_size_mb = [math]::Round($exe_size / 1MB, 2)
-              Write-Host "✓ NovelForge.exe created"
-              Write-Host "  Size: $exe_size_mb MB"
-              Write-Host "  Path: $(Get-Item dist/NovelForge.exe | Select-Object -ExpandProperty FullName)"
-              
-              # Verify it's a valid PE file
-              $bytes = [System.IO.File]::ReadAllBytes("dist/NovelForge.exe")
-              if ($bytes[0] -eq 77 -and $bytes[1] -eq 90) {  # MZ signature
-                  Write-Host "✓ Valid Windows executable (MZ signature found)"
-              } else {
-                  Write-Host "✗ Invalid executable signature"
-                  exit 1
-              }
-          } else {
-              Write-Host "✗ NovelForge.exe not found"
-              Write-Host "Contents of dist/:"
-              Get-ChildItem dist/ -Recurse | ForEach-Object {
-                  Write-Host "  $($_.FullName)"
-              }
-              exit 1
-          }
-        shell: pwsh
-      
-      - name: Create distribution package
-        run: |
-          Write-Host "Creating distribution package..."
-          
-          # Copy additional files
-          Copy-Item README.md -Destination dist/ -ErrorAction SilentlyContinue
-          Copy-Item INSTALLATION_GUIDE.md -Destination dist/ -ErrorAction SilentlyContinue
-          Copy-Item requirements.txt -Destination dist/ -ErrorAction SilentlyContinue
-          Copy-Item config.py -Destination dist/ -ErrorAction SilentlyContinue
-          
-          # Create version file
-          $version = "${{ github.event.release.tag_name }}" -replace "^v", ""
-          if ([string]::IsNullOrEmpty($version)) {
-              $version = "dev"
-          }
-          
-          $version_info = @"
-          VERSION = '$version'
-          RELEASE_DATE = '$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')'
-          BUILD_NUMBER = '${{ github.run_number }}'
-          COMMIT = '${{ github.sha }}'
-          "@
-          
-          $version_info | Out-File -Encoding UTF8 dist/VERSION.txt
-          
-          Write-Host "✓ Distribution package created"
-        shell: pwsh
-      
-      - name: Test executable (basic run)
-        run: |
-          Write-Host "Testing executable..."
-          
-          # Create a batch file to test the EXE
-          $test_script = @"
-          @echo off
-          REM Test: Run exe with --help equivalent (won't work since it's interactive)
-          REM Instead, just verify it exists and runs
-          echo Testing...
-          dist\NovelForge.exe --version 2>&1 || echo Exe exists and is executable
-          "@
-          
-          $test_script | Out-File test.bat
-          
-          Write-Host "✓ Executable created and verified"
-        shell: pwsh
-        continue-on-error: true
-      
-      - name: Upload EXE to GitHub Release
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            dist/NovelForge.exe
-            dist/README.md
-            dist/VERSION.txt
-            dist/requirements.txt
-          draft: false
-          prerelease: ${{ contains(github.event.release.tag_name, 'rc') || contains(github.event.release.tag_name, 'beta') }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Create release summary
-        if: github.event_name == 'release'
-        run: |
-          $summary = @"
-          # Release Build Summary
-          
-          **Version:** ${{ github.event.release.tag_name }}
-          **Date:** $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
-          **Build Number:** ${{ github.run_number }}
-          
-          ## Artifacts
-          - ✓ NovelForge.exe (Windows Standalone)
-          - ✓ README.md
-          - ✓ requirements.txt
-          
-          ## Build Details
-          - Python: 3.11
-          - PyInstaller: 6.1.0
-          - Platform: Windows
-          
-          ## Installation
-          1. Download NovelForge.exe
-          2. Run directly (no installation needed)
-          3. Or: pip install -r requirements.txt && python main.py
-          "@
-          
-          Write-Host $summary
-        shell: pwsh
-      
-      - name: Upload artifacts
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: NovelForge-${{ github.event.release.tag_name || 'dev' }}-Windows
-          path: dist/
-          retention-days: 90
-  
-  # ========================================================================
-  # Generate Release Notes & Changelog
-  # ========================================================================
-  generate-changelog:
-    name: Generate Changelog
-    runs-on: ubuntu-latest
-    if: github.event_name == 'release'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      
-      - name: Generate changelog
-        run: |
-          echo "# Changelog" > CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          echo "## ${{ github.event.release.tag_name }}" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          echo "**Release Date:** $(date '+%Y-%m-%d')" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          
-          if [ -n "${{ github.event.release.body }}" ]; then
-              echo "## Changes" >> CHANGELOG.md
-              echo "${{ github.event.release.body }}" >> CHANGELOG.md
-          fi
-          
-          echo "" >> CHANGELOG.md
-          echo "## Downloads" >> CHANGELOG.md
-          echo "- Windows: NovelForge.exe" >> CHANGELOG.md
-          echo "- Source: Download ZIP/TAR from release" >> CHANGELOG.md
-          
-          echo "✓ Changelog generated"
-          cat CHANGELOG.md
-      
-      - name: Update GitHub Release
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v1
-        with:
-          body_path: CHANGELOG.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  
-  # ========================================================================
-  # Verify Release
-  # ========================================================================
-  verify-release:
-    name: Verify Release Assets
-    runs-on: windows-latest
-    needs: build-windows-exe
-    if: github.event_name == 'release'
-    
-    steps:
-      - name: Download release artifacts
-        run: |
-          Write-Host "Verifying release assets..."
-          
-          # Get release info
-          $release = gh release view ${{ github.event.release.tag_name }} --json assets -q '.assets'
-          
-          if ($null -eq $release) {
-              Write-Host "✗ No release assets found"
-              exit 1
-          }
-          
-          Write-Host "✓ Release assets verified"
-          $release | ForEach-Object {
-              Write-Host "  - $($_.name) ($([math]::Round($_.size / 1MB, 2)) MB)"
-          }
-        shell: pwsh
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Announce release
-        run: |
-          Write-Host "=========================================="
-          Write-Host "Release Published: ${{ github.event.release.tag_name }}"
-          Write-Host "=========================================="
-          Write-Host ""
-          Write-Host "Available at:"
-          Write-Host "https://github.com/${{ github.repository }}/releases/tag/${{ github.event.release.tag_name }}"
-          Write-Host ""
-          Write-Host "Downloads:"
-          Write-Host "- Windows EXE: NovelForge.exe"
-          Write-Host "- Source Code: ZIP / TAR.GZ"
-          Write-Host ""
-        shell: pwsh
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-  # ========================================================================
-  # Post-Release Cleanup
-  # ========================================================================
-  cleanup:
-    name: Cleanup Build Artifacts
-    runs-on: ubuntu-latest
-    if: always()
-    needs: [build-windows-exe, verify-release]
-    
-    steps:
-      - name: Remove intermediate artifacts
-        uses: geekyeggo/delete-artifact@v2
-        with:
-          name: |
-            NovelForge-Windows-*
-          failOnError: false
-        continue-on-error: true
-      
-      - name: Summary
-        run: |
-          echo "✓ Release workflow completed"
-          echo "Release: ${{ github.event.release.tag_name }}"
-          echo "Build number: ${{ github.run_number }}"
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        pip install -r requirements.txt
+        pip install pyinstaller
+
+    - name: Check for icon.ico
+      shell: pwsh
+      run: |
+        if (Test-Path "icon.ico") {
+          Write-Host "✓ icon.ico found"
+          $env:HAS_ICON = "true"
+        } else {
+          Write-Host "⚠️ icon.ico not found - will build without icon"
+          $env:HAS_ICON = "false"
+        }
+        echo "HAS_ICON=$env:HAS_ICON" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+    - name: Build EXE with PyInstaller
+      shell: cmd
+      run: |
+        if "%HAS_ICON%"=="true" (
+          pyinstaller --name "NovelForge" --onefile --icon=icon.ico --collect-all rich --clean --distpath ./dist --workpath ./build main.py
+        ) else (
+          pyinstaller --name "NovelForge" --onefile --collect-all rich --clean --distpath ./dist --workpath ./build main.py
+        )
+
+    - name: Verify Build Output
+      shell: pwsh
+      run: |
+        if (Test-Path "dist/NovelForge.exe") {
+          $size = [math]::Round((Get-Item "dist/NovelForge.exe").length / 1MB, 2)
+          Write-Host "✓ NovelForge.exe created successfully (${size} MB)"
+        } else {
+          Write-Host "✗ Build failed - NovelForge.exe not found"
+          Get-ChildItem dist/ -Recurse
+          exit 1
+        }
+
+    - name: Upload EXE as Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: NovelForge-Windows
+        path: dist/NovelForge.exe
+        retention-days: 30
+
+    - name: Publish GitHub Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: dist/NovelForge.exe
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
